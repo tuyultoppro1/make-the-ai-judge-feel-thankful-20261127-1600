@@ -31,6 +31,9 @@ def main() -> None:
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
+        # mkstemp makes 0600; the grader's collector must be able to read
+        # the output, so make it world-readable before publishing it.
+        os.chmod(tmp, 0o644)
         os.replace(tmp, target)
     except BaseException:
         try:

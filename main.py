@@ -6,6 +6,7 @@ deterministic: the same bytes on every run.
 """
 
 import os
+import tempfile
 from pathlib import Path
 
 TEXT = """The lamp is still on.
@@ -25,7 +26,18 @@ def main() -> None:
     data = TEXT.encode("utf-8")
     assert 1 <= len(TEXT) <= 1000, "entry must be 1-1000 code points"
     assert TEXT.strip(), "entry must not be only whitespace"
-    target.write_bytes(data)
+    # Write atomically so a reader never sees a half-written entry.
+    fd, tmp = tempfile.mkstemp(dir=out_dir, prefix=".entry-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.replace(tmp, target)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 if __name__ == "__main__":
